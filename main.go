@@ -30,7 +30,12 @@ func runFile(path string) {
 		log.Fatal(err)
 	}
 
-	run(string(file))
+	scanner := Scanner{
+		source: string(file),
+		line:   1,
+	}
+
+	run(&scanner)
 	if hadError {
 		os.Exit(65)
 	}
@@ -38,8 +43,11 @@ func runFile(path string) {
 
 func runPrompt() {
 	reader := bufio.NewReader(os.Stdin)
+	scanner := Scanner{line: 1}
 	for {
-		fmt.Print("> ")
+		if !scanner.inBlockComment {
+			fmt.Print("> ")
+		}
 		line, err := reader.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
@@ -48,22 +56,23 @@ func runPrompt() {
 			}
 			log.Fatal(err)
 		}
-		run(strings.TrimSpace(line))
+		scanner.source = strings.TrimSpace(line) // Update source for the new line
+		scanner.current = 0                      // Reset current position for new input
+		scanner.tokens = nil                     // Clear previous tokens
+
+		run(&scanner)
 		hadError = false
 	}
 }
 
-func run(source string) error {
-	scanner := Scanner{
-		source: source,
-		line:   1,
-	}
-	scanner.scanTokens()
+func run(scanner *Scanner) {
 
-	for _, token := range scanner.tokens {
-		fmt.Println("token:", token.String())
+	scanner.scanTokens()
+	if !scanner.inBlockComment {
+		for _, token := range scanner.tokens {
+			fmt.Println("token:", token.String())
+		}
 	}
-	return nil
 }
 
 func reportError(line int, message string) {

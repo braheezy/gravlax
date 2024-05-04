@@ -25,11 +25,12 @@ var keywords = map[string]TokenType{
 }
 
 type Scanner struct {
-	source  string
-	tokens  []Token
-	start   int
-	current int
-	line    int
+	source         string
+	tokens         []Token
+	start          int
+	current        int
+	line           int
+	inBlockComment bool
 }
 
 func (s *Scanner) scanTokens() {
@@ -47,6 +48,20 @@ func (s *Scanner) isAtEnd() bool {
 }
 
 func (s *Scanner) scanToken() {
+	if s.inBlockComment {
+		// Continue skipping characters until the end of the block comment
+		for !s.isAtEnd() {
+			if s.peek() == '*' && s.peekNext() == '/' {
+				s.advance()              // Advance to '*'
+				s.advance()              // Advance to '/'
+				s.inBlockComment = false // End block comment
+				return
+			}
+			s.advance()
+		}
+		return // if EOF reached while still in a block comment
+	}
+
 	c := s.advance()
 	switch c {
 	case '(':
@@ -99,6 +114,43 @@ func (s *Scanner) scanToken() {
 			for s.peek() != '\n' && !s.isAtEnd() {
 				s.advance()
 			}
+		} else if s.match('*') {
+			s.inBlockComment = true
+			// A block comment goes until another '*/' is encountered
+			for !s.isAtEnd() && s.inBlockComment {
+				if s.peek() == '*' && s.peekNext() == '/' {
+					s.advance() // Advance to '*'
+					s.advance() // Advance to '/'
+					s.inBlockComment = false
+				} else {
+					s.advance()
+				}
+			}
+			// for {
+			// 	if s.peek() == '*' && s.peekNext() == '/' {
+			// 		// Consume the closing '*/'
+			// 		s.advance()
+			// 		s.advance()
+			// 		break
+			// 	} else if s.isAtEnd() {
+			// 		reportError(s.line, "Unterminated block comment")
+			// 	} else {
+			// 		if s.peek() == '\n' {
+			// 			s.advance()
+			// 		}
+			// 		s.advance()
+			// 	}
+			// }
+			// for s.peek() != '*' && s.peekNext() != '/' && !s.isAtEnd() {
+			// 	if s.peek() == '\n' {
+			// 		continue
+			// 	} else {
+			// 		s.advance()
+			// 	}
+			// }
+			// Consume the last '*/'
+			// s.advance()
+			// s.advance()
 		} else {
 			s.addToken(SLASH, nil)
 		}
