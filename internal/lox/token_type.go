@@ -1,4 +1,4 @@
-package main
+package lox
 
 type TokenType int
 

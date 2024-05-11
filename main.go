@@ -7,10 +7,8 @@ import (
 	"log"
 	"os"
 	"strings"
-)
 
-var (
-	hadError bool
+	"github.com/braheezy/gravlax/internal/lox"
 )
 
 func main() {
@@ -30,22 +28,22 @@ func runFile(path string) {
 		log.Fatal(err)
 	}
 
-	scanner := Scanner{
-		source: string(file),
-		line:   1,
+	scanner := lox.Scanner{
+		Source: string(file),
+		Line:   1,
 	}
 
-	run(&scanner)
-	if hadError {
+	err = run(&scanner)
+	if err != nil {
 		os.Exit(65)
 	}
 }
 
 func runPrompt() {
 	reader := bufio.NewReader(os.Stdin)
-	scanner := Scanner{line: 1}
+	scanner := lox.Scanner{Line: 1}
 	for {
-		if !scanner.inBlockComment {
+		if !scanner.InBlockComment {
 			fmt.Print("> ")
 		}
 		line, err := reader.ReadString('\n')
@@ -56,30 +54,21 @@ func runPrompt() {
 			}
 			log.Fatal(err)
 		}
-		scanner.source = strings.TrimSpace(line) // Update source for the new line
-		scanner.current = 0                      // Reset current position for new input
-		scanner.tokens = nil                     // Clear previous tokens
+		scanner.Source = strings.TrimSpace(line) // Update source for the new line
+		scanner.Current = 0                      // Reset current position for new input
+		scanner.Tokens = nil                     // Clear previous tokens
 
 		run(&scanner)
-		hadError = false
 	}
 }
 
-func run(scanner *Scanner) {
+func run(scanner *lox.Scanner) error {
 
-	scanner.scanTokens()
-	if !scanner.inBlockComment {
-		for _, token := range scanner.tokens {
+	err := scanner.ScanTokens()
+	if !scanner.InBlockComment {
+		for _, token := range scanner.Tokens {
 			fmt.Println("token:", token.String())
 		}
 	}
-}
-
-func reportError(line int, message string) {
-	report(line, "", message)
-}
-
-func report(line int, where string, message string) {
-	fmt.Fprintf(os.Stderr, "[line %d] Error%s:%s\n", line, where, message)
-	hadError = true
+	return err
 }

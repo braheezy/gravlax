@@ -1,7 +1,10 @@
-package main
+package lox
 
 import (
+	"errors"
+	"fmt"
 	"log"
+	"os"
 	"strconv"
 )
 
@@ -25,41 +28,51 @@ var keywords = map[string]TokenType{
 }
 
 type Scanner struct {
-	source         string
-	tokens         []Token
+	Source         string
+	Tokens         []Token
 	start          int
-	current        int
-	line           int
-	inBlockComment bool
+	Current        int
+	Line           int
+	InBlockComment bool
 }
 
-func (s *Scanner) scanTokens() {
+func (s *Scanner) ScanTokens() error {
+	var err error
+	var hadError bool
 	for !s.isAtEnd() {
 		// We are at the beginning of the next lexeme.
-		s.start = s.current
-		s.scanToken()
+		s.start = s.Current
+		err = s.scanToken()
+		if err != nil {
+			hadError = true
+		}
 	}
 
-	s.tokens = append(s.tokens, Token{Type: EOF, Line: s.line})
+	s.Tokens = append(s.Tokens, Token{Type: EOF, Line: s.Line})
+
+	if hadError {
+		return errors.New("")
+	}
+	return nil
 }
 
 func (s *Scanner) isAtEnd() bool {
-	return s.current >= len(s.source)
+	return s.Current >= len(s.Source)
 }
 
-func (s *Scanner) scanToken() {
-	if s.inBlockComment {
+func (s *Scanner) scanToken() error {
+	if s.InBlockComment {
 		// Continue skipping characters until the end of the block comment
 		for !s.isAtEnd() {
 			if s.peek() == '*' && s.peekNext() == '/' {
 				s.advance()              // Advance to '*'
 				s.advance()              // Advance to '/'
-				s.inBlockComment = false // End block comment
-				return
+				s.InBlockComment = false // End block comment
+				return nil
 			}
 			s.advance()
 		}
-		return // if EOF reached while still in a block comment
+		return nil
 	}
 
 	c := s.advance()
@@ -115,42 +128,17 @@ func (s *Scanner) scanToken() {
 				s.advance()
 			}
 		} else if s.match('*') {
-			s.inBlockComment = true
+			s.InBlockComment = true
 			// A block comment goes until another '*/' is encountered
-			for !s.isAtEnd() && s.inBlockComment {
+			for !s.isAtEnd() && s.InBlockComment {
 				if s.peek() == '*' && s.peekNext() == '/' {
 					s.advance() // Advance to '*'
 					s.advance() // Advance to '/'
-					s.inBlockComment = false
+					s.InBlockComment = false
 				} else {
 					s.advance()
 				}
 			}
-			// for {
-			// 	if s.peek() == '*' && s.peekNext() == '/' {
-			// 		// Consume the closing '*/'
-			// 		s.advance()
-			// 		s.advance()
-			// 		break
-			// 	} else if s.isAtEnd() {
-			// 		reportError(s.line, "Unterminated block comment")
-			// 	} else {
-			// 		if s.peek() == '\n' {
-			// 			s.advance()
-			// 		}
-			// 		s.advance()
-			// 	}
-			// }
-			// for s.peek() != '*' && s.peekNext() != '/' && !s.isAtEnd() {
-			// 	if s.peek() == '\n' {
-			// 		continue
-			// 	} else {
-			// 		s.advance()
-			// 	}
-			// }
-			// Consume the last '*/'
-			// s.advance()
-			// s.advance()
 		} else {
 			s.addToken(SLASH, nil)
 		}
@@ -158,29 +146,31 @@ func (s *Scanner) scanToken() {
 	case '\r':
 	case '\t':
 	case '\n':
-		s.line++
+		s.Line++
 	case '"':
-		s.handleString()
+		return s.handleString()
 	default:
 		if isDigit(c) {
 			s.handleNumber()
 		} else if isAlpha(c) {
 			s.handleIdentifier()
 		} else {
-			reportError(s.line, "Unexpected character.")
+			fmt.Fprintf(os.Stderr, "[line %d] Error%s:%s\n", s.Line, "", "Unexpected character.")
+			return errors.New("")
 		}
 	}
+	return nil
 }
 
 func (s *Scanner) advance() rune {
-	char := s.source[s.current]
-	s.current++
+	char := s.Source[s.Current]
+	s.Current++
 	return rune(char)
 }
 
 func (s *Scanner) addToken(tokenType TokenType, literal interface{}) {
-	text := s.source[s.start:s.current]
-	s.tokens = append(s.tokens, Token{Type: tokenType, Lexeme: text, Literal: literal, Line: s.line})
+	text := s.Source[s.start:s.Current]
+	s.Tokens = append(s.Tokens, Token{Type: tokenType, Lexeme: text, Literal: literal, Line: s.Line})
 }
 
 func (s *Scanner) match(expected rune) bool {
@@ -188,11 +178,11 @@ func (s *Scanner) match(expected rune) bool {
 		return false
 	}
 
-	if rune(s.source[s.current]) != expected {
+	if rune(s.Source[s.Current]) != expected {
 		return false
 	}
 
-	s.current++
+	s.Current++
 	return true
 }
 
@@ -200,35 +190,36 @@ func (s *Scanner) peek() rune {
 	if s.isAtEnd() {
 		return rune(0)
 	}
-	return rune(s.source[s.current])
+	return rune(s.Source[s.Current])
 }
 
 func (s *Scanner) peekNext() rune {
-	if s.current+1 >= len(s.source) {
+	if s.Current+1 >= len(s.Source) {
 		return rune(0)
 	}
-	return rune(s.source[s.current+1])
+	return rune(s.Source[s.Current+1])
 }
 
-func (s *Scanner) handleString() {
+func (s *Scanner) handleString() error {
 	for s.peek() != '"' && !s.isAtEnd() {
 		if s.peek() == '\n' {
-			s.line++
+			s.Line++
 		}
 		s.advance()
 	}
 
 	if s.isAtEnd() {
-		reportError(s.line, "Unterminated string.")
-		return
+		fmt.Fprintf(os.Stderr, "[line %d] Error%s:%s\n", s.Line, "", "Unterminated string.")
+		return errors.New("")
 	}
 
 	// The closing "
 	s.advance()
 
 	// Trim surrounding quotes
-	value := s.source[s.start+1 : s.current-1]
+	value := s.Source[s.start+1 : s.Current-1]
 	s.addToken(STRING, value)
+	return nil
 }
 
 func (s *Scanner) handleNumber() {
@@ -246,7 +237,7 @@ func (s *Scanner) handleNumber() {
 		}
 	}
 
-	value, err := strconv.Atoi(s.source[s.start:s.current])
+	value, err := strconv.Atoi(s.Source[s.start:s.Current])
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -258,7 +249,7 @@ func (s *Scanner) handleIdentifier() {
 		s.advance()
 	}
 
-	text := s.source[s.start:s.current]
+	text := s.Source[s.start:s.Current]
 	if value, ok := keywords[text]; ok {
 		s.addToken(value, nil)
 	} else {
