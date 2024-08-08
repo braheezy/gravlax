@@ -1,8 +1,27 @@
 package lox
 
+import "errors"
+
 type Parser struct {
-	tokens  []Token
+	Tokens  []Token
 	current int
+}
+
+func (p *Parser) Parse() (Expr, error) {
+	var err error
+	defer func() {
+		if r := recover(); r != nil {
+			// Handle panic if it's a ParseError
+			if parseErr, ok := r.(ParseError); ok {
+				err = parseErr
+			} else {
+				panic(r) // If it's not a ParseError, re-panic
+			}
+		}
+	}()
+
+	expr := p.expression()
+	return expr, err
 }
 
 func (p *Parser) expression() Expr {
@@ -84,7 +103,8 @@ func (p *Parser) primary() Expr {
 		return Grouping{expr}
 	}
 
-	return nil
+	// on a token that can't start an expression
+	panic(p.error(p.peek(), "Expect expression."))
 }
 
 func (p *Parser) match(tokenTypes ...TokenType) bool {
@@ -102,7 +122,8 @@ func (p *Parser) consume(tokenType TokenType, message string) Token {
 	if p.check(tokenType) {
 		return p.advance()
 	}
-	
+
+	panic(p.error(p.peek(), message))
 }
 
 func (p *Parser) check(tokenType TokenType) bool {
@@ -124,9 +145,40 @@ func (p *Parser) isAtEnd() bool {
 }
 
 func (p *Parser) peek() Token {
-	return p.tokens[p.current]
+	return p.Tokens[p.current]
 }
 
 func (p *Parser) previous() Token {
-	return p.tokens[p.current-1]
+	return p.Tokens[p.current-1]
+}
+
+type ParseError error
+
+func (p *Parser) error(token Token, message string) error {
+	reportTokenError(token, message)
+	return ParseError(errors.New(message))
+}
+
+func (p *Parser) synchronize() {
+	p.advance()
+
+	for !p.isAtEnd() {
+		if p.previous().Type == SEMICOLON {
+			return
+		}
+
+		switch p.peek().Type {
+		case CLASS:
+		case FUN:
+		case VAR:
+		case FOR:
+		case IF:
+		case WHILE:
+		case PRINT:
+		case RETURN:
+			return
+		}
+
+		p.advance()
+	}
 }
