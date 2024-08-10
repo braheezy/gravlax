@@ -22,6 +22,9 @@ func RunFile(path string) {
 
 	err = run(&scanner)
 	if err != nil {
+		if _, ok := err.(*RuntimeError); ok {
+			os.Exit(70)
+		}
 		os.Exit(65)
 	}
 }
@@ -64,7 +67,7 @@ func run(scanner *Scanner) error {
 			return err
 		}
 		if expression != nil {
-			PrintAST(expression)
+			interpret(expression)
 		}
 	}
 	return nil

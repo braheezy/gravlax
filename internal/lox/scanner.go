@@ -237,7 +237,7 @@ func (s *Scanner) handleNumber() {
 		}
 	}
 
-	value, err := strconv.Atoi(s.Source[s.start:s.Current])
+	value, err := strconv.ParseFloat(s.Source[s.start:s.Current], 32)
 	if err != nil {
 		log.Fatal(err)
 	}
