@@ -48,9 +48,7 @@ func RunPrompt() {
 		scanner.Current = 0                      // Reset current position for new input
 		scanner.Tokens = nil                     // Clear previous tokens
 
-		if err := run(&scanner); err != nil {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
-		}
+		run(&scanner)
 	}
 }
 
@@ -62,12 +60,12 @@ func run(scanner *Scanner) error {
 
 	if !scanner.InBlockComment {
 		parser := Parser{Tokens: scanner.Tokens}
-		expression, err := parser.Parse()
+		statements, err := parser.Parse()
 		if err != nil {
 			return err
 		}
-		if expression != nil {
-			interpret(expression)
+		if statements != nil {
+			interpret(statements)
 		}
 	}
 	return nil

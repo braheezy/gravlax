@@ -17,12 +17,13 @@ func (e *RuntimeError) Error() string {
 	return e.Message
 }
 
-func interpret(e Expr) {
-	value, err := e.Eval()
-	if err != nil {
-		handleRuntimeError(err)
-	} else {
-		println(stringify(value))
+func interpret(statements []Stmt) {
+	for _, statement := range statements {
+
+		err := execute(statement)
+		if err != nil {
+			handleRuntimeError(err)
+		}
 	}
 }
 
@@ -121,6 +122,20 @@ func (u Unary) Eval() (interface{}, *RuntimeError) {
 		return !isTruthy(right), nil
 	}
 	return nil, nil
+}
+
+func (v Variable) Eval() (interface{}, *RuntimeError) {
+	return environment.get(v.name)
+}
+
+func (a Assign) Eval() (interface{}, *RuntimeError) {
+	value, err := a.value.Eval()
+	if err != nil {
+		return nil, err
+	}
+
+	environment.assign(a.name, value)
+	return value, nil
 }
 
 func isTruthy(e interface{}) bool {

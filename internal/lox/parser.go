@@ -1,13 +1,15 @@
 package lox
 
-import "errors"
+import (
+	"errors"
+)
 
 type Parser struct {
 	Tokens  []Token
 	current int
 }
 
-func (p *Parser) Parse() (Expr, error) {
+func (p *Parser) Parse() ([]Stmt, error) {
 	var err error
 	defer func() {
 		if r := recover(); r != nil {
@@ -20,14 +22,101 @@ func (p *Parser) Parse() (Expr, error) {
 		}
 	}()
 
-	expr := p.expression()
-	return expr, err
+	var statements []Stmt
+	for !p.isAtEnd() {
+		dec, err := p.declaration()
+		if err != nil {
+			return nil, err
+		}
+		statements = append(statements, dec)
+	}
+	return statements, err
 }
 
 func (p *Parser) expression() Expr {
-	return p.equality()
+	return p.assignment()
 }
 
+func (p *Parser) declaration() (stmt Stmt, err ParseError) {
+	defer func() {
+		if r := recover(); r != nil {
+			// Handle panic if it's a ParseError
+			if parseError, ok := r.(ParseError); ok {
+				p.synchronize()
+				err = parseError
+			} else {
+				panic(r)
+			}
+		}
+	}()
+
+	if p.match(VAR) {
+		stmt = p.varDeclaration()
+	} else {
+		stmt = p.statement()
+	}
+	return stmt, err
+}
+func (p *Parser) statement() Stmt {
+	if p.match(PRINT) {
+		return p.printStatement()
+	}
+	if p.match(LEFT_BRACE) {
+		return Block{statements: p.block()}
+	}
+	return p.expressionStatement()
+}
+
+func (p *Parser) printStatement() Stmt {
+	value := p.expression()
+	p.consume(SEMICOLON, "Expect ';' after value.")
+	return Print{expression: value}
+}
+
+func (p *Parser) varDeclaration() Stmt {
+	name := p.consume(IDENTIFIER, "Expect variable name.")
+	var initializer Expr
+	if p.match(EQUAL) {
+		initializer = p.expression()
+	}
+
+	p.consume(SEMICOLON, "Expect ';' after variable declaration.")
+	return Var{name: name, initializer: initializer}
+}
+
+func (p *Parser) expressionStatement() Stmt {
+	value := p.expression()
+	p.consume(SEMICOLON, "Expect ';' after value.")
+	return Expression{expression: value}
+}
+
+func (p *Parser) block() []Stmt {
+	var statements []Stmt
+	for !p.check(RIGHT_BRACE) && !p.isAtEnd() {
+		dec, _ := p.declaration()
+		statements = append(statements, dec)
+	}
+
+	p.consume(RIGHT_BRACE, "Expect '}' after block.")
+	return statements
+}
+
+func (p *Parser) assignment() Expr {
+	expr := p.equality()
+
+	if p.match(EQUAL) {
+		equals := p.previous()
+		value := p.assignment()
+
+		if _, ok := expr.(Variable); ok {
+			name := expr.(Variable).name
+			return Assign{name: name, value: value}
+		}
+
+		reportTokenError(equals, "Invalid assignment target.")
+	}
+	return expr
+}
 func (p *Parser) equality() Expr {
 	expr := p.comparison()
 
@@ -101,6 +190,9 @@ func (p *Parser) primary() Expr {
 		expr := p.expression()
 		p.consume(RIGHT_PAREN, "Expect ')' after expression.")
 		return Grouping{expr}
+	}
+	if p.match(IDENTIFIER) {
+		return Variable{p.previous()}
 	}
 
 	// on a token that can't start an expression
