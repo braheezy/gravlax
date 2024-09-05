@@ -9,11 +9,11 @@ type Environment struct {
 
 var environment = NewEnvironment()
 
-func NewEnvironment() Environment {
-	return Environment{values: make(map[string]interface{})}
+func NewEnvironment() *Environment {
+	return &Environment{values: make(map[string]interface{})}
 }
-func NewEnvironmentWithEnclosing(enclosing Environment) Environment {
-	return Environment{values: make(map[string]interface{}), enclosing: &enclosing}
+func NewEnvironmentWithEnclosing(enclosing *Environment) *Environment {
+	return &Environment{values: make(map[string]interface{}), enclosing: enclosing}
 }
 func (e *Environment) define(name string, value interface{}) {
 	e.values[name] = value
@@ -39,7 +39,7 @@ func (e *Environment) assign(name Token, value interface{}) *RuntimeError {
 	}
 
 	if e.enclosing != nil {
-		e.assign(name, value)
+		e.enclosing.assign(name, value)
 		return nil
 	}
 

@@ -24,6 +24,16 @@ func (e Expression) Execute() (interface{}, *RuntimeError) {
 	return nil, nil
 }
 
+func (i If) Execute() (interface{}, *RuntimeError) {
+	val, _ := i.condition.Eval()
+	if isTruthy(val) {
+		i.thenBranch.Execute()
+	} else if i.elseBranch != nil {
+		i.elseBranch.Execute()
+	}
+	return nil, nil
+}
+
 func (v Var) Execute() (interface{}, *RuntimeError) {
 	var value interface{}
 	var err *RuntimeError
@@ -37,11 +47,21 @@ func (v Var) Execute() (interface{}, *RuntimeError) {
 	environment.define(v.name.Lexeme, value)
 	return nil, nil
 }
+func (w While) Execute() (interface{}, *RuntimeError) {
+	for {
+		val, _ := w.condition.Eval()
+		if !isTruthy(val) {
+			break
+		}
+		w.body.Execute()
+	}
+	return nil, nil
+}
 func (b Block) Execute() (interface{}, *RuntimeError) {
 	executeBlock(b.statements, NewEnvironmentWithEnclosing(environment))
 	return nil, nil
 }
-func executeBlock(statements []Stmt, env Environment) {
+func executeBlock(statements []Stmt, env *Environment) {
 	previous := environment
 
 	environment = env

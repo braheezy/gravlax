@@ -23,6 +23,12 @@ type Literal struct {
   value interface{}
 }
 
+type Logical struct {
+  left Expr
+  operator Token
+  right Expr
+}
+
 type Unary struct {
   operator Token
   right Expr

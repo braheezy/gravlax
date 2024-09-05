@@ -12,6 +12,12 @@ type Expression struct {
   expression Expr
 }
 
+type If struct {
+  condition Expr
+  thenBranch Stmt
+  elseBranch Stmt
+}
+
 type Print struct {
   expression Expr
 }
@@ -20,3 +26,9 @@ type Var struct {
   initializer Expr
   name Token
 }
+
+type While struct {
+  condition Expr
+  body Stmt
+}
+

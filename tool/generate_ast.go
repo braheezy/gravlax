@@ -21,6 +21,7 @@ func main() {
 		"Binary   : left Expr, operator Token, right Expr",
 		"Grouping : expression Expr",
 		"Literal  : value interface{}",
+		"Logical  : left Expr, operator Token, right Expr",
 		"Unary    : operator Token, right Expr",
 		"Variable : name Token",
 	}, "Eval")
@@ -30,8 +31,10 @@ func main() {
 	err = defineAst(outputDir, "Stmt", []string{
 		"Block      : statements []Stmt",
 		"Expression : expression Expr",
+		"If         : condition Expr, thenBranch Stmt, elseBranch Stmt",
 		"Print      : expression Expr",
 		"Var        : initializer Expr, name Token",
+		"While      : condition Expr, body Stmt",
 	}, "Execute")
 	if err != nil {
 		log.Fatal(err)

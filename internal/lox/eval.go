@@ -31,6 +31,21 @@ func (l Literal) Eval() (interface{}, *RuntimeError) {
 	return l.value, nil
 }
 
+func (l Logical) Eval() (interface{}, *RuntimeError) {
+	left, _ := l.left.Eval()
+
+	if l.operator.Type == OR {
+		if isTruthy(left) {
+			return left, nil
+		} else {
+			if !isTruthy(left) {
+				return left, nil
+			}
+		}
+	}
+	return l.right.Eval()
+}
+
 func (g Grouping) Eval() (interface{}, *RuntimeError) {
 	return g.expression.Eval()
 }
@@ -93,7 +108,6 @@ func (b Binary) Eval() (interface{}, *RuntimeError) {
 		if leftOk && rightOK {
 			return leftNumber + rightNumber, nil
 		}
-		println(leftNumber, leftOk)
 		leftString, leftOk := left.(string)
 		rightString, rightOK := right.(string)
 
@@ -153,10 +167,6 @@ func isEqual(a interface{}, b interface{}) bool {
 }
 
 func stringify(value interface{}) string {
-	// if value == nil {
-	// 	return "nil"
-	// }
-
 	switch v := value.(type) {
 	case float64:
 		// Convert the float32 to a string
