@@ -35,6 +35,7 @@ func main() {
 		"Print      : expression Expr",
 		"Var        : initializer Expr, name Token",
 		"While      : condition Expr, body Stmt",
+		"Break      : ",
 	}, "Execute")
 	if err != nil {
 		log.Fatal(err)

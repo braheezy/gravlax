@@ -25,13 +25,13 @@ func (e Expression) Execute() (interface{}, *RuntimeError) {
 }
 
 func (i If) Execute() (interface{}, *RuntimeError) {
-	val, _ := i.condition.Eval()
+	val, err := i.condition.Eval()
 	if isTruthy(val) {
-		i.thenBranch.Execute()
+		_, err = i.thenBranch.Execute()
 	} else if i.elseBranch != nil {
-		i.elseBranch.Execute()
+		_, err = i.elseBranch.Execute()
 	}
-	return nil, nil
+	return nil, err
 }
 
 func (v Var) Execute() (interface{}, *RuntimeError) {
@@ -53,15 +53,21 @@ func (w While) Execute() (interface{}, *RuntimeError) {
 		if !isTruthy(val) {
 			break
 		}
-		w.body.Execute()
+
+		_, err := w.body.Execute()
+		if err != nil {
+			if err.Message == "break" {
+				break
+			}
+			return nil, err
+		}
 	}
 	return nil, nil
 }
 func (b Block) Execute() (interface{}, *RuntimeError) {
-	executeBlock(b.statements, NewEnvironmentWithEnclosing(environment))
-	return nil, nil
+	return nil, executeBlock(b.statements, NewEnvironmentWithEnclosing(environment))
 }
-func executeBlock(statements []Stmt, env *Environment) {
+func executeBlock(statements []Stmt, env *Environment) *RuntimeError {
 	previous := environment
 
 	environment = env
@@ -69,9 +75,16 @@ func executeBlock(statements []Stmt, env *Environment) {
 		_, err := stmt.Execute()
 		if err != nil {
 			environment = previous
-			return
+			return err
 		}
 	}
 
 	environment = previous
+	return nil
+}
+
+func (b Break) Execute() (interface{}, *RuntimeError) {
+	return nil, &RuntimeError{
+		Message: "break",
+	}
 }

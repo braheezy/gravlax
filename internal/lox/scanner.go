@@ -10,6 +10,7 @@ import (
 
 var keywords = map[string]TokenType{
 	"and":    AND,
+	"break":  BREAK,
 	"class":  CLASS,
 	"else":   ELSE,
 	"false":  FALSE,

@@ -32,3 +32,7 @@ type While struct {
   body Stmt
 }
 
+type Break struct {
+  
+}
+

@@ -5,8 +5,9 @@ import (
 )
 
 type Parser struct {
-	Tokens  []Token
-	current int
+	Tokens    []Token
+	current   int
+	loopDepth int
 }
 
 func (p *Parser) Parse() ([]Stmt, error) {
@@ -70,12 +71,18 @@ func (p *Parser) statement() Stmt {
 	if p.match(WHILE) {
 		return p.whileStatement()
 	}
+	if p.match(BREAK) {
+		return p.breakStatement()
+	}
 	if p.match(LEFT_BRACE) {
 		return Block{statements: p.block()}
 	}
 	return p.expressionStatement()
 }
 func (p *Parser) forStatement() Stmt {
+	p.loopDepth++
+	defer func() { p.loopDepth-- }()
+
 	p.consume(LEFT_PAREN, "Expect '(' after 'for'.")
 
 	var initializer Stmt
@@ -149,12 +156,27 @@ func (p *Parser) varDeclaration() Stmt {
 }
 
 func (p *Parser) whileStatement() Stmt {
+	p.loopDepth++
+	defer func() {}()
+
 	p.consume(LEFT_PAREN, "Expect '(' after 'while'.")
 	condition := p.expression()
 	p.consume(RIGHT_PAREN, "Expect ')' after condition.")
+
+	p.loopDepth++
 	body := p.statement()
+	p.loopDepth--
 
 	return While{condition, body}
+}
+
+func (p *Parser) breakStatement() Stmt {
+	if p.loopDepth == 0 {
+		p.error(p.previous(), "Cannot use 'break' outside of a loop.")
+	}
+
+	p.consume(SEMICOLON, "Expect ';' after 'break'.")
+	return Break{}
 }
 
 func (p *Parser) expressionStatement() Stmt {
