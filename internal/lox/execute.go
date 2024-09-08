@@ -32,7 +32,7 @@ func (e Expression) Execute() *RuntimeError {
 	return nil
 }
 func (f Function) Execute() *RuntimeError {
-	fun := LoxFunction{&f}
+	fun := LoxFunction{&f, environment}
 	environment.define(f.name.Lexeme, fun)
 	return nil
 }

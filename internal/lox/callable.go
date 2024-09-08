@@ -10,10 +10,11 @@ type Callable interface {
 
 type LoxFunction struct {
 	declaration *Function
+	closure     *Environment
 }
 
 func (lf LoxFunction) call(arguments []interface{}) (out interface{}) {
-	environment := NewEnvironmentWithEnclosing(globals)
+	environment := NewEnvironmentWithEnclosing(lf.closure)
 
 	for i := 0; i < len(lf.declaration.params); i++ {
 		environment.define(lf.declaration.params[i].Lexeme, arguments[i])
