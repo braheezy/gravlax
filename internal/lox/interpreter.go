@@ -1,21 +1,13 @@
 package lox
 
-type Interpreter struct {
-	globals     *Environment
-	environment *Environment
+var globals = NewEnvironment()
+var environment = globals
+
+func init() {
+	globals.define("clock", ClockFunction{})
 }
 
-func NewInterpreter() *Interpreter {
-	i := Interpreter{}
-	i.globals = NewEnvironment()
-	i.environment = i.globals
-
-	i.globals.define("clock", ClockFunction{})
-
-	return &i
-}
-
-func (i *Interpreter) interpret(statements []Stmt) {
+func interpret(statements []Stmt) {
 	for _, statement := range statements {
 
 		err := execute(statement)

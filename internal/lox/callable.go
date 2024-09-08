@@ -3,7 +3,7 @@ package lox
 import "fmt"
 
 type Callable interface {
-	call(*Interpreter, []interface{}) interface{}
+	call([]interface{}) interface{}
 	arity() int
 	toString() string
 }
@@ -12,8 +12,8 @@ type LoxFunction struct {
 	declaration *Function
 }
 
-func (lf LoxFunction) call(i *Interpreter, arguments []interface{}) (out interface{}) {
-	environment := NewEnvironmentWithEnclosing(i.globals)
+func (lf LoxFunction) call(arguments []interface{}) (out interface{}) {
+	environment := NewEnvironmentWithEnclosing(globals)
 
 	for i := 0; i < len(lf.declaration.params); i++ {
 		environment.define(lf.declaration.params[i].Lexeme, arguments[i])

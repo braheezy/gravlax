@@ -135,7 +135,7 @@ func (c Call) Eval() (interface{}, *RuntimeError) {
 			Message: fmt.Sprintf("Expected %v arguments but got %v.", function.arity(), len(arguments)),
 		}
 	}
-	return function.call(interpreter, arguments), nil
+	return function.call(arguments), nil
 }
 func (u Unary) Eval() (interface{}, *RuntimeError) {
 	right, err := u.right.Eval()
@@ -156,7 +156,7 @@ func (u Unary) Eval() (interface{}, *RuntimeError) {
 }
 
 func (v Variable) Eval() (interface{}, *RuntimeError) {
-	return interpreter.environment.get(v.name)
+	return environment.get(v.name)
 }
 
 func (a Assign) Eval() (interface{}, *RuntimeError) {
@@ -165,7 +165,7 @@ func (a Assign) Eval() (interface{}, *RuntimeError) {
 		return nil, err
 	}
 
-	interpreter.environment.assign(a.name, value)
+	environment.assign(a.name, value)
 	return value, nil
 }
 
