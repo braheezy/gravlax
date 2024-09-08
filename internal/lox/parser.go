@@ -2,6 +2,7 @@ package lox
 
 import (
 	"errors"
+	"fmt"
 )
 
 type Parser struct {
@@ -51,6 +52,9 @@ func (p *Parser) declaration() (stmt Stmt, err ParseError) {
 		}
 	}()
 
+	if p.match(FUN) {
+		return p.function("function"), nil
+	}
 	if p.match(VAR) {
 		stmt = p.varDeclaration()
 	} else {
@@ -67,6 +71,9 @@ func (p *Parser) statement() Stmt {
 	}
 	if p.match(PRINT) {
 		return p.printStatement()
+	}
+	if p.match(RETURN) {
+		return p.returnStatement()
 	}
 	if p.match(WHILE) {
 		return p.whileStatement()
@@ -144,6 +151,16 @@ func (p *Parser) printStatement() Stmt {
 	return Print{expression: value}
 }
 
+func (p *Parser) returnStatement() Stmt {
+	keyword := p.previous()
+	var value Expr
+	if !p.check(SEMICOLON) {
+		value = p.expression()
+	}
+	p.consume(SEMICOLON, "Expect ';' after return value.")
+	return Return{keyword, value}
+}
+
 func (p *Parser) varDeclaration() Stmt {
 	name := p.consume(IDENTIFIER, "Expect variable name.")
 	var initializer Expr
@@ -184,7 +201,28 @@ func (p *Parser) expressionStatement() Stmt {
 	p.consume(SEMICOLON, "Expect ';' after value.")
 	return Expression{expression: value}
 }
+func (p *Parser) function(kind string) Stmt {
+	name := p.consume(IDENTIFIER, fmt.Sprintf("Expect %v name.", kind))
 
+	p.consume(LEFT_PAREN, fmt.Sprintf("Expect '(' after %v name.", kind))
+	var parameters []Token
+	if !p.check(RIGHT_PAREN) {
+		if len(parameters) >= 255 {
+			p.error(p.peek(), "Can't have more than 255 parameters.")
+		}
+		parameters = append(parameters, p.consume(IDENTIFIER, "Expect parameter name."))
+		for p.match(COMMA) {
+			if len(parameters) >= 255 {
+				p.error(p.peek(), "Can't have more than 255 parameters.")
+			}
+			parameters = append(parameters, p.consume(IDENTIFIER, "Expect parameter name."))
+		}
+	}
+	p.consume(RIGHT_PAREN, "Expect ')' after parameters.")
+	p.consume(LEFT_BRACE, fmt.Sprintf("Expect '{' before %v body.", kind))
+	body := p.block()
+	return Function{name, parameters, body}
+}
 func (p *Parser) block() []Stmt {
 	var statements []Stmt
 	for !p.check(RIGHT_BRACE) && !p.isAtEnd() {
@@ -285,9 +323,36 @@ func (p *Parser) unary() Expr {
 		right := p.unary()
 		return Unary{operator, right}
 	}
-	return p.primary()
+	return p.call()
 }
+func (p *Parser) finishCall(callee Expr) Expr {
+	var arguments []Expr
+	if !p.check(RIGHT_PAREN) {
+		arguments = append(arguments, p.expression())
+		for p.match(COMMA) {
+			arguments = append(arguments, p.expression())
+			if len(arguments) >= 255 {
+				p.error(p.peek(), "Can't have more than 255 arguments.")
+			}
+		}
+	}
+	paren := p.consume(RIGHT_PAREN, "Expect ')' after arguments.")
 
+	return Call{callee, paren, arguments}
+}
+func (p *Parser) call() Expr {
+	expr := p.primary()
+
+	for {
+		if p.match(LEFT_PAREN) {
+			expr = p.finishCall(expr)
+		} else {
+			break
+		}
+	}
+
+	return expr
+}
 func (p *Parser) primary() Expr {
 	if p.match(FALSE) {
 		return Literal{false}

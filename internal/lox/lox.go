@@ -9,6 +9,8 @@ import (
 	"strings"
 )
 
+var interpreter = NewInterpreter()
+
 func RunFile(path string) {
 	file, err := os.ReadFile(path)
 	if err != nil {
@@ -65,7 +67,7 @@ func run(scanner *Scanner) error {
 			return err
 		}
 		if statements != nil {
-			interpret(statements)
+			interpreter.interpret(statements)
 		}
 	}
 	return nil

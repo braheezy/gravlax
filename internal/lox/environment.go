@@ -7,8 +7,6 @@ type Environment struct {
 	enclosing *Environment
 }
 
-var environment = NewEnvironment()
-
 func NewEnvironment() *Environment {
 	return &Environment{values: make(map[string]interface{})}
 }

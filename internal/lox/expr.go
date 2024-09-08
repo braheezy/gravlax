@@ -15,6 +15,12 @@ type Binary struct {
   right Expr
 }
 
+type Call struct {
+  callee Expr
+  paren Token
+  arguments []Expr
+}
+
 type Grouping struct {
   expression Expr
 }

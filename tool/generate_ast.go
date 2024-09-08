@@ -19,30 +19,33 @@ func main() {
 	err := defineAst(outputDir, "Expr", []string{
 		"Assign   : name Token, value Expr",
 		"Binary   : left Expr, operator Token, right Expr",
+		"Call     : callee Expr, paren Token, arguments []Expr",
 		"Grouping : expression Expr",
 		"Literal  : value interface{}",
 		"Logical  : left Expr, operator Token, right Expr",
 		"Unary    : operator Token, right Expr",
 		"Variable : name Token",
-	}, "Eval")
+	}, "Eval", "(interface{}, *RuntimeError)")
 	if err != nil {
 		log.Fatal(err)
 	}
 	err = defineAst(outputDir, "Stmt", []string{
 		"Block      : statements []Stmt",
 		"Expression : expression Expr",
+		"Function   : name Token, params []Token, body []Stmt",
 		"If         : condition Expr, thenBranch Stmt, elseBranch Stmt",
 		"Print      : expression Expr",
+		"Return     : keyword Token, value Expr",
 		"Var        : initializer Expr, name Token",
 		"While      : condition Expr, body Stmt",
 		"Break      : ",
-	}, "Execute")
+	}, "Execute", "*RuntimeError")
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
-func defineAst(dir string, baseName string, types []string, methodName string) error {
+func defineAst(dir string, baseName string, types []string, methodName string, methodArgs string) error {
 	path := path.Join(dir, fmt.Sprintf("%v.go", strings.ToLower(baseName)))
 	file, err := os.Create(path)
 	if err != nil {
@@ -60,7 +63,7 @@ func defineAst(dir string, baseName string, types []string, methodName string) e
 	writer.WriteRune('\n')
 
 	writer.WriteString(fmt.Sprintf("type %v interface {\n", baseName))
-	writer.WriteString(fmt.Sprintf("%v() (interface{}, *RuntimeError)\n}", methodName))
+	writer.WriteString(fmt.Sprintf("%v() %v\n}", methodName, methodArgs))
 	writer.WriteRune('\n')
 
 	for _, astType := range types {

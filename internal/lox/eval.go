@@ -17,16 +17,6 @@ func (e *RuntimeError) Error() string {
 	return e.Message
 }
 
-func interpret(statements []Stmt) {
-	for _, statement := range statements {
-
-		err := execute(statement)
-		if err != nil {
-			handleRuntimeError(err)
-		}
-	}
-}
-
 func (l Literal) Eval() (interface{}, *RuntimeError) {
 	return l.value, nil
 }
@@ -120,6 +110,33 @@ func (b Binary) Eval() (interface{}, *RuntimeError) {
 	return nil, nil
 }
 
+func (c Call) Eval() (interface{}, *RuntimeError) {
+	callee, _ := c.callee.Eval()
+
+	var arguments []interface{}
+	for _, arg := range c.arguments {
+		val, _ := arg.Eval()
+		arguments = append(arguments, val)
+	}
+
+	function, ok := callee.(Callable)
+	if !ok {
+		return nil, &RuntimeError{
+			// Assuming c.paren is the token that represents the call
+			Token:   c.paren,
+			Message: "Can only call functions and classes.",
+		}
+	}
+
+	if len(arguments) != function.arity() {
+		return nil, &RuntimeError{
+			// Assuming c.paren is the token that represents the call
+			Token:   c.paren,
+			Message: fmt.Sprintf("Expected %v arguments but got %v.", function.arity(), len(arguments)),
+		}
+	}
+	return function.call(interpreter, arguments), nil
+}
 func (u Unary) Eval() (interface{}, *RuntimeError) {
 	right, err := u.right.Eval()
 	if err != nil {
@@ -139,7 +156,7 @@ func (u Unary) Eval() (interface{}, *RuntimeError) {
 }
 
 func (v Variable) Eval() (interface{}, *RuntimeError) {
-	return environment.get(v.name)
+	return interpreter.environment.get(v.name)
 }
 
 func (a Assign) Eval() (interface{}, *RuntimeError) {
@@ -148,7 +165,7 @@ func (a Assign) Eval() (interface{}, *RuntimeError) {
 		return nil, err
 	}
 
-	environment.assign(a.name, value)
+	interpreter.environment.assign(a.name, value)
 	return value, nil
 }
 

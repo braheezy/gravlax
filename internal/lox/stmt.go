@@ -2,7 +2,7 @@
 package lox
 
 type Stmt interface {
-Execute() (interface{}, *RuntimeError)
+Execute() *RuntimeError
 }
 type Block struct {
   statements []Stmt
@@ -10,6 +10,12 @@ type Block struct {
 
 type Expression struct {
   expression Expr
+}
+
+type Function struct {
+  name Token
+  params []Token
+  body []Stmt
 }
 
 type If struct {
@@ -20,6 +26,11 @@ type If struct {
 
 type Print struct {
   expression Expr
+}
+
+type Return struct {
+  keyword Token
+  value Expr
 }
 
 type Var struct {
