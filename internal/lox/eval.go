@@ -169,6 +169,15 @@ func (a Assign) Eval() (interface{}, *RuntimeError) {
 	return value, nil
 }
 
+func (af AnonFunction) Eval() (interface{}, *RuntimeError) {
+	return &LoxFunction{
+		declaration: &Function{
+			name:   nil, // Anonymous functions have no name
+			params: af.params,
+			body:   af.body,
+		},
+	}, nil
+}
 func isTruthy(e interface{}) bool {
 	if e == nil {
 		return false

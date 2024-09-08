@@ -13,7 +13,12 @@ type Expression struct {
 }
 
 type Function struct {
-  name Token
+  name *Token
+  params []Token
+  body []Stmt
+}
+
+type AnonFunction struct {
   params []Token
   body []Stmt
 }

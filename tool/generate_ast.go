@@ -30,15 +30,16 @@ func main() {
 		log.Fatal(err)
 	}
 	err = defineAst(outputDir, "Stmt", []string{
-		"Block      : statements []Stmt",
-		"Expression : expression Expr",
-		"Function   : name Token, params []Token, body []Stmt",
-		"If         : condition Expr, thenBranch Stmt, elseBranch Stmt",
-		"Print      : expression Expr",
-		"Return     : keyword Token, value Expr",
-		"Var        : initializer Expr, name Token",
-		"While      : condition Expr, body Stmt",
-		"Break      : ",
+		"Block        : statements []Stmt",
+		"Expression   : expression Expr",
+		"Function     : name *Token, params []Token, body []Stmt",
+		"AnonFunction : params []Token, body []Stmt",
+		"If           : condition Expr, thenBranch Stmt, elseBranch Stmt",
+		"Print        : expression Expr",
+		"Return       : keyword Token, value Expr",
+		"Var          : initializer Expr, name Token",
+		"While        : condition Expr, body Stmt",
+		"Break        : ",
 	}, "Execute", "*RuntimeError")
 	if err != nil {
 		log.Fatal(err)

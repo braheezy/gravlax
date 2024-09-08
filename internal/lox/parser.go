@@ -207,21 +207,36 @@ func (p *Parser) function(kind string) Stmt {
 	p.consume(LEFT_PAREN, fmt.Sprintf("Expect '(' after %v name.", kind))
 	var parameters []Token
 	if !p.check(RIGHT_PAREN) {
-		if len(parameters) >= 255 {
-			p.error(p.peek(), "Can't have more than 255 parameters.")
-		}
-		parameters = append(parameters, p.consume(IDENTIFIER, "Expect parameter name."))
-		for p.match(COMMA) {
-			if len(parameters) >= 255 {
-				p.error(p.peek(), "Can't have more than 255 parameters.")
-			}
+		for {
 			parameters = append(parameters, p.consume(IDENTIFIER, "Expect parameter name."))
+			if !p.match(COMMA) {
+				break
+			}
 		}
 	}
 	p.consume(RIGHT_PAREN, "Expect ')' after parameters.")
 	p.consume(LEFT_BRACE, fmt.Sprintf("Expect '{' before %v body.", kind))
 	body := p.block()
-	return Function{name, parameters, body}
+
+	return Function{&name, parameters, body}
+}
+func (p *Parser) anonFunction() Expr {
+	p.consume(LEFT_PAREN, "Expect '(' before anonymous function parameters.")
+	var parameters []Token
+	if !p.check(RIGHT_PAREN) {
+		for {
+			parameters = append(parameters, p.consume(IDENTIFIER, "Expect parameter name."))
+			if !p.match(COMMA) {
+				break
+			}
+		}
+	}
+	p.consume(RIGHT_PAREN, "Expect ')' after parameters.")
+	p.consume(LEFT_BRACE, "Expect '{' before anonymous function body.")
+	body := p.block()
+
+	// Return the anonymous function as an expression
+	return AnonFunction{params: parameters, body: body}
 }
 func (p *Parser) block() []Stmt {
 	var statements []Stmt
@@ -365,6 +380,10 @@ func (p *Parser) primary() Expr {
 	}
 	if p.match(NUMBER, STRING) {
 		return Literal{p.previous().Literal}
+	}
+	if p.match(FUN) {
+		// Directly parse the anonymous function as an expression
+		return p.anonFunction()
 	}
 	if p.match(LEFT_PAREN) {
 		expr := p.expression()
