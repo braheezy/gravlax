@@ -32,8 +32,8 @@ func (e Expression) Execute() *RuntimeError {
 	return nil
 }
 func (f Function) Execute() *RuntimeError {
-	fun := LoxFunction{&f, environment}
-	environment.define(f.name.Lexeme, fun)
+	fun := LoxFunction{&f, interpreter.environment}
+	interpreter.environment.define(f.name.Lexeme, fun)
 	return nil
 }
 
@@ -57,7 +57,7 @@ func (v Var) Execute() *RuntimeError {
 		}
 	}
 
-	environment.define(v.name.Lexeme, value)
+	interpreter.environment.define(v.name.Lexeme, value)
 	return nil
 }
 func (w While) Execute() *RuntimeError {
@@ -78,16 +78,16 @@ func (w While) Execute() *RuntimeError {
 	return nil
 }
 func (b Block) Execute() *RuntimeError {
-	return executeBlock(b.statements, NewEnvironmentWithEnclosing(environment))
+	return executeBlock(b.statements, NewEnvironmentWithEnclosing(interpreter.environment))
 }
 func executeBlock(statements []Stmt, env *Environment) *RuntimeError {
-	previous := environment
+	previous := interpreter.environment
 
 	defer func() {
-		environment = previous
+		interpreter.environment = previous
 	}()
 
-	environment = env
+	interpreter.environment = env
 	for _, stmt := range statements {
 		err := stmt.Execute()
 		if err != nil {

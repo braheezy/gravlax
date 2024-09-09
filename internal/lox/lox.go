@@ -64,8 +64,16 @@ func run(scanner *Scanner) error {
 		if err != nil {
 			return err
 		}
+
+		// resolver := NewResolver(interpreter)
+		// resolver.resolveStatements(statements)
+
+		// if interpreter.hadError {
+		// 	return errors.New("error during resolution")
+		// }
+
 		if statements != nil {
-			interpret(statements)
+			interpreter.interpret(statements)
 		}
 	}
 	return nil
@@ -81,6 +89,7 @@ func reportTokenError(token Token, message string) {
 	} else {
 		report(token.Line, " at '"+token.Lexeme+"'", message)
 	}
+	interpreter.hadError = true
 }
 
 func report(lint int, where string, message string) {

@@ -17,6 +17,19 @@ func (e *Environment) define(name string, value interface{}) {
 	e.values[name] = value
 }
 
+func (e *Environment) ancestor(distance int) *Environment {
+	env := e
+	for i := 0; i < distance; i++ {
+		env = env.enclosing
+	}
+	return env
+}
+func (e *Environment) getAt(distance int, name string) (interface{}, *RuntimeError) {
+	return e.ancestor(distance).values[name], nil
+}
+func (e *Environment) assignAt(distance int, name Token, value interface{}) {
+	e.ancestor(distance).values[name.Lexeme] = value
+}
 func (e *Environment) get(name Token) (interface{}, *RuntimeError) {
 	value, ok := e.values[name.Lexeme]
 	if ok {

@@ -189,7 +189,7 @@ func (p *Parser) whileStatement() Stmt {
 
 func (p *Parser) breakStatement() Stmt {
 	if p.loopDepth == 0 {
-		p.error(p.previous(), "Cannot use 'break' outside of a loop.")
+		loxError(p.previous(), "Cannot use 'break' outside of a loop.")
 	}
 
 	p.consume(SEMICOLON, "Expect ';' after 'break'.")
@@ -347,7 +347,7 @@ func (p *Parser) finishCall(callee Expr) Expr {
 		for p.match(COMMA) {
 			arguments = append(arguments, p.expression())
 			if len(arguments) >= 255 {
-				p.error(p.peek(), "Can't have more than 255 arguments.")
+				loxError(p.peek(), "Can't have more than 255 arguments.")
 			}
 		}
 	}
@@ -395,7 +395,7 @@ func (p *Parser) primary() Expr {
 	}
 
 	// on a token that can't start an expression
-	panic(p.error(p.peek(), "Expect expression."))
+	panic(loxError(p.peek(), "Expect expression."))
 }
 
 func (p *Parser) match(tokenTypes ...TokenType) bool {
@@ -414,7 +414,7 @@ func (p *Parser) consume(tokenType TokenType, message string) Token {
 		return p.advance()
 	}
 
-	panic(p.error(p.peek(), message))
+	panic(loxError(p.peek(), message))
 }
 
 func (p *Parser) check(tokenType TokenType) bool {
@@ -445,7 +445,7 @@ func (p *Parser) previous() Token {
 
 type ParseError error
 
-func (p *Parser) error(token Token, message string) error {
+func loxError(token Token, message string) error {
 	reportTokenError(token, message)
 	return ParseError(errors.New(message))
 }

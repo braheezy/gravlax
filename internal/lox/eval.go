@@ -156,16 +156,31 @@ func (u Unary) Eval() (interface{}, *RuntimeError) {
 }
 
 func (v Variable) Eval() (interface{}, *RuntimeError) {
-	return environment.get(v.name)
+	// return lookupVariable(v.name, v)
+	return interpreter.environment.get(v.name)
 }
 
+//	func lookupVariable(name Token, expr Expr) (interface{}, *RuntimeError) {
+//		distance, exists := interpreter.locals[expr]
+//		if exists {
+//			return interpreter.environment.getAt(distance, name.Lexeme)
+//		} else {
+//			return interpreter.globals.get(name)
+//		}
+//	}
 func (a Assign) Eval() (interface{}, *RuntimeError) {
 	value, err := a.value.Eval()
 	if err != nil {
 		return nil, err
 	}
 
-	environment.assign(a.name, value)
+	// distance, exists := interpreter.locals[a]
+	// if exists {
+	// 	interpreter.environment.assignAt(distance, a.name, value)
+	// } else {
+	// interpreter.globals.assign(a.name, value)
+	interpreter.environment.assign(a.name, value)
+	// }
 	return value, nil
 }
 
