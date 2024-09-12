@@ -32,7 +32,7 @@ func (e *Expression) Execute() *RuntimeError {
 	return nil
 }
 func (f *Function) Execute() *RuntimeError {
-	fun := LoxFunction{f, interpreter.environment}
+	fun := &LoxFunction{declaration: f, closure: interpreter.environment}
 	interpreter.environment.define(f.name.Lexeme, fun)
 	return nil
 }
@@ -101,6 +101,22 @@ func executeBlock(statements []Stmt, env *Environment) *RuntimeError {
 	return nil
 }
 
+func (c *Class) Execute() *RuntimeError {
+	interpreter.environment.define(c.name.Lexeme, nil)
+
+	methods := make(map[string]*LoxFunction)
+	for _, method := range c.methods {
+		function := &LoxFunction{
+			declaration:   method,
+			closure:       interpreter.environment,
+			isInitializer: method.name.Lexeme == "init",
+		}
+		methods[method.name.Lexeme] = function
+	}
+	class := &LoxClass{name: c.name.Lexeme, methods: methods}
+	interpreter.environment.assign(c.name, class)
+	return nil
+}
 func (b *Break) Execute() *RuntimeError {
 	return &RuntimeError{
 		Message: "break",

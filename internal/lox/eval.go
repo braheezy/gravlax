@@ -20,7 +20,6 @@ func (e *RuntimeError) Error() string {
 func (l *Literal) Eval() (interface{}, *RuntimeError) {
 	return l.value, nil
 }
-
 func (l *Logical) Eval() (interface{}, *RuntimeError) {
 	left, _ := l.left.Eval()
 
@@ -35,11 +34,29 @@ func (l *Logical) Eval() (interface{}, *RuntimeError) {
 	}
 	return l.right.Eval()
 }
+func (s *Set) Eval() (interface{}, *RuntimeError) {
+	object, err := s.object.Eval()
+	if err != nil {
+		return nil, err
+	}
 
+	if _, ok := object.(*LoxInstance); !ok {
+		return nil, &RuntimeError{s.name, "Only instances have fields."}
+	}
+
+	value, err := s.value.Eval()
+	if err != nil {
+		return nil, err
+	}
+	object.(*LoxInstance).set(s.name, value)
+	return value, nil
+}
+func (t *This) Eval() (interface{}, *RuntimeError) {
+	return lookupVariable(t.keyword, t)
+}
 func (g *Grouping) Eval() (interface{}, *RuntimeError) {
 	return g.expression.Eval()
 }
-
 func (b *Binary) Eval() (interface{}, *RuntimeError) {
 	left, err := b.left.Eval()
 	if err != nil {
@@ -109,7 +126,6 @@ func (b *Binary) Eval() (interface{}, *RuntimeError) {
 
 	return nil, nil
 }
-
 func (c *Call) Eval() (interface{}, *RuntimeError) {
 	callee, _ := c.callee.Eval()
 
@@ -137,6 +153,16 @@ func (c *Call) Eval() (interface{}, *RuntimeError) {
 	}
 	return function.call(arguments), nil
 }
+func (g *Get) Eval() (interface{}, *RuntimeError) {
+	object, err := g.object.Eval()
+	if err != nil {
+		return nil, err
+	}
+	if inst, ok := object.(*LoxInstance); ok {
+		return inst.get(g.name)
+	}
+	return nil, &RuntimeError{g.name, "Only instances have properties."}
+}
 func (u *Unary) Eval() (interface{}, *RuntimeError) {
 	right, err := u.right.Eval()
 	if err != nil {
@@ -154,11 +180,9 @@ func (u *Unary) Eval() (interface{}, *RuntimeError) {
 	}
 	return nil, nil
 }
-
 func (v *Variable) Eval() (interface{}, *RuntimeError) {
 	return lookupVariable(v.name, v)
 }
-
 func lookupVariable(name Token, expr Expr) (interface{}, *RuntimeError) {
 	distance, exists := interpreter.locals[expr]
 	if exists {
@@ -181,7 +205,6 @@ func (a *Assign) Eval() (interface{}, *RuntimeError) {
 	}
 	return value, nil
 }
-
 func (af *AnonFunction) Eval() (interface{}, *RuntimeError) {
 	return &LoxFunction{
 		declaration: &Function{
@@ -205,6 +228,10 @@ func isEqual(a interface{}, b interface{}) bool {
 	return a == b
 }
 
+type Stringer interface {
+	toString() string
+}
+
 func stringify(value interface{}) string {
 	switch v := value.(type) {
 	case float64:
@@ -213,6 +240,8 @@ func stringify(value interface{}) string {
 		// If it ends with ".0", remove it
 		text = strings.TrimSuffix(text, ".000000")
 		return text
+	case Stringer:
+		return v.toString()
 	default:
 		// Fallback for other types, using fmt.Sprintf to handle them
 		return fmt.Sprintf("%v", value)

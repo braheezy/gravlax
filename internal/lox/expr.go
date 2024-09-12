@@ -21,6 +21,11 @@ type Call struct {
   arguments []Expr
 }
 
+type Get struct {
+  object Expr
+  name Token
+}
+
 type Grouping struct {
   expression Expr
 }
@@ -33,6 +38,16 @@ type Logical struct {
   left Expr
   operator Token
   right Expr
+}
+
+type Set struct {
+  object Expr
+  name Token
+  value Expr
+}
+
+type This struct {
+  keyword Token
 }
 
 type Unary struct {

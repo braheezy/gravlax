@@ -8,6 +8,11 @@ type Block struct {
   statements []Stmt
 }
 
+type Class struct {
+  name Token
+  methods []*Function
+}
+
 type Expression struct {
   expression Expr
 }

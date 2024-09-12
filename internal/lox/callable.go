@@ -9,10 +9,16 @@ type Callable interface {
 }
 
 type LoxFunction struct {
-	declaration *Function
-	closure     *Environment
+	declaration   *Function
+	closure       *Environment
+	isInitializer bool
 }
 
+func (lf LoxFunction) bind(instance *LoxInstance) *LoxFunction {
+	env := NewEnvironmentWithEnclosing(lf.closure)
+	env.define("this", instance)
+	return &LoxFunction{declaration: lf.declaration, closure: env, isInitializer: lf.isInitializer}
+}
 func (lf LoxFunction) call(arguments []interface{}) (out interface{}) {
 	environment := NewEnvironmentWithEnclosing(lf.closure)
 
@@ -26,6 +32,9 @@ func (lf LoxFunction) call(arguments []interface{}) (out interface{}) {
 			if returnValue, ok := r.(*Ret); ok {
 				// Unwind the call with the return value.
 				out = returnValue.value
+				if lf.isInitializer {
+					out, _ = lf.closure.getAt(0, "this")
+				}
 			} else {
 				panic(r) // Re-panic if it's not the expected return value error.
 			}
@@ -33,6 +42,10 @@ func (lf LoxFunction) call(arguments []interface{}) (out interface{}) {
 	}()
 
 	executeBlock(lf.declaration.body, environment)
+	if lf.isInitializer {
+		value, _ := lf.closure.getAt(0, "this")
+		return value
+	}
 	return nil
 }
 

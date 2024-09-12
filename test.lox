@@ -1,10 +1,7 @@
-var a = "global";
-{
-  fun showA() {
-    print a;
+class Foo {
+  init() {
+    return;
   }
-
-  showA();
-  var a = "block";
-  showA();
 }
+
+Foo();

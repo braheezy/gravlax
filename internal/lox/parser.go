@@ -52,6 +52,9 @@ func (p *Parser) declaration() (stmt Stmt, err ParseError) {
 		}
 	}()
 
+	if p.match(CLASS) {
+		return p.classDeclaration(), nil
+	}
 	if p.match(FUN) {
 		return p.function("function"), nil
 	}
@@ -61,6 +64,19 @@ func (p *Parser) declaration() (stmt Stmt, err ParseError) {
 		stmt = p.statement()
 	}
 	return stmt, err
+}
+func (p *Parser) classDeclaration() Stmt {
+	name := p.consume(IDENTIFIER, "Expect class name.")
+	p.consume(LEFT_BRACE, "Expect '{' before class body.")
+
+	var methods []*Function
+	for !p.check(RIGHT_BRACE) && !p.isAtEnd() {
+		newFunc := p.function("method")
+		methods = append(methods, newFunc.(*Function))
+	}
+
+	p.consume(RIGHT_BRACE, "Expect '}' after class body.")
+	return &Class{name, methods}
 }
 func (p *Parser) statement() Stmt {
 	if p.match(FOR) {
@@ -256,9 +272,10 @@ func (p *Parser) assignment() Expr {
 		equals := p.previous()
 		value := p.assignment()
 
-		if _, ok := expr.(*Variable); ok {
-			name := expr.(*Variable).name
-			return &Assign{name: name, value: value}
+		if e, ok := expr.(*Variable); ok {
+			return &Assign{e.name, value}
+		} else if g, ok := expr.(*Get); ok {
+			return &Set{g.object, g.name, value}
 		}
 
 		reportTokenError(equals, "Invalid assignment target.")
@@ -361,6 +378,9 @@ func (p *Parser) call() Expr {
 	for {
 		if p.match(LEFT_PAREN) {
 			expr = p.finishCall(expr)
+		} else if p.match(DOT) {
+			name := p.consume(IDENTIFIER, "Expect property name after '.'.")
+			expr = &Get{expr, name}
 		} else {
 			break
 		}
@@ -389,6 +409,9 @@ func (p *Parser) primary() Expr {
 		expr := p.expression()
 		p.consume(RIGHT_PAREN, "Expect ')' after expression.")
 		return &Grouping{expr}
+	}
+	if p.match(THIS) {
+		return &This{p.previous()}
 	}
 	if p.match(IDENTIFIER) {
 		return &Variable{p.previous()}

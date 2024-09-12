@@ -5,6 +5,15 @@ type FunctionType int
 const (
 	NoFunct FunctionType = iota
 	Funct
+	InitFunc
+	MethodFunc
+)
+
+type ClassType int
+
+const (
+	NoClass ClassType = iota
+	InClass
 )
 
 type LoopType int
@@ -19,6 +28,7 @@ type Resolver struct {
 	scopes          []map[string]bool
 	currentFunction FunctionType
 	currentLoop     LoopType
+	currentClass    ClassType
 }
 
 type Resolvable interface {
@@ -30,6 +40,8 @@ func NewResolver(i *Interpreter) *Resolver {
 		interpreter:     i,
 		scopes:          make([]map[string]bool, 0),
 		currentFunction: NoFunct,
+		currentClass:    NoClass,
+		currentLoop:     NoLoop,
 	}
 }
 
@@ -38,11 +50,32 @@ func (b *Block) Resolve(r *Resolver) {
 	r.resolveStatements(b.statements)
 	r.endScope()
 }
+func (c *Class) Resolve(r *Resolver) {
+	enclosingClass := r.currentClass
+	r.currentClass = InClass
+	defer func() {
+		r.currentClass = enclosingClass
+	}()
 
+	r.declare(c.name)
+	r.define(c.name)
+
+	r.beginScope()
+	peek(r.scopes)["this"] = true
+
+	for _, method := range c.methods {
+		ftype := MethodFunc
+		if method.name.Lexeme == "init" {
+			ftype = InitFunc
+		}
+		r.resolveFunction(*method, ftype)
+	}
+
+	r.endScope()
+}
 func (e *Expression) Resolve(r *Resolver) {
 	e.expression.(Resolvable).Resolve(r)
 }
-
 func (v *Var) Resolve(r *Resolver) {
 	r.declare(v.name)
 	if v.initializer != nil {
@@ -73,6 +106,9 @@ func (c *Call) Resolve(r *Resolver) {
 		arg.(Resolvable).Resolve(r)
 	}
 }
+func (g *Get) Resolve(r *Resolver) {
+	g.object.(Resolvable).Resolve(r)
+}
 func (g *Grouping) Resolve(r *Resolver) {
 	g.expression.(Resolvable).Resolve(r)
 }
@@ -82,6 +118,16 @@ func (l *Literal) Resolve(r *Resolver) {
 func (l *Logical) Resolve(r *Resolver) {
 	l.left.(Resolvable).Resolve(r)
 	l.right.(Resolvable).Resolve(r)
+}
+func (s *Set) Resolve(r *Resolver) {
+	s.value.(Resolvable).Resolve(r)
+	s.object.(Resolvable).Resolve(r)
+}
+func (t *This) Resolve(r *Resolver) {
+	if r.currentClass == NoClass {
+		loxError(t.keyword, "Can't use 'this' outside of a class!")
+	}
+	r.resolveLocal(t, t.keyword)
 }
 func (u *Unary) Resolve(r *Resolver) {
 	u.right.(Resolvable).Resolve(r)
@@ -123,12 +169,15 @@ func (re *Return) Resolve(r *Resolver) {
 	}
 
 	if re.value != nil {
+		if r.currentFunction == InitFunc {
+			loxError(re.keyword, "Can't return a value from an initializer.")
+		}
 		re.value.(Resolvable).Resolve(r)
 	}
 }
 func (v *Variable) Resolve(r *Resolver) {
 	if len(r.scopes) != 0 {
-		scope := r.scopes[len(r.scopes)-1]
+		scope := peek(r.scopes)
 		if initialized, exists := scope[v.name.Lexeme]; exists && !initialized {
 			loxError(v.name, "Can't read local variable in its own initializer!")
 		}
@@ -178,7 +227,7 @@ func (r *Resolver) declare(name Token) {
 		return
 	}
 
-	scope := r.scopes[len(r.scopes)-1]
+	scope := peek(r.scopes)
 	if _, exists := scope[name.Lexeme]; exists {
 		loxError(name, "Already a variable with this name in this scope.")
 	}
@@ -189,7 +238,7 @@ func (r *Resolver) define(name Token) {
 	if len(r.scopes) == 0 {
 		return
 	}
-	r.scopes[len(r.scopes)-1][name.Lexeme] = true
+	peek(r.scopes)[name.Lexeme] = true
 }
 
 func (r *Resolver) resolveLocal(expr Expr, name Token) {
@@ -199,4 +248,8 @@ func (r *Resolver) resolveLocal(expr Expr, name Token) {
 			return
 		}
 	}
+}
+
+func peek(scopes []map[string]bool) map[string]bool {
+	return scopes[len(scopes)-1]
 }
