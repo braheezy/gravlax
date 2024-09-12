@@ -6,7 +6,7 @@ func execute(stmt Stmt) *RuntimeError {
 	return stmt.Execute()
 }
 
-func (p Print) Execute() *RuntimeError {
+func (p *Print) Execute() *RuntimeError {
 	value, err := p.expression.Eval()
 	if err != nil {
 		return err
@@ -15,7 +15,7 @@ func (p Print) Execute() *RuntimeError {
 	return nil
 }
 
-func (r Return) Execute() *RuntimeError {
+func (r *Return) Execute() *RuntimeError {
 	var value interface{}
 	if r.value != nil {
 		value, _ = r.value.Eval()
@@ -24,20 +24,20 @@ func (r Return) Execute() *RuntimeError {
 	panic(NewReturn(value))
 }
 
-func (e Expression) Execute() *RuntimeError {
+func (e *Expression) Execute() *RuntimeError {
 	_, err := e.expression.Eval()
 	if err != nil {
 		return err
 	}
 	return nil
 }
-func (f Function) Execute() *RuntimeError {
-	fun := LoxFunction{&f, interpreter.environment}
+func (f *Function) Execute() *RuntimeError {
+	fun := LoxFunction{f, interpreter.environment}
 	interpreter.environment.define(f.name.Lexeme, fun)
 	return nil
 }
 
-func (i If) Execute() *RuntimeError {
+func (i *If) Execute() *RuntimeError {
 	val, err := i.condition.Eval()
 	if isTruthy(val) {
 		err = i.thenBranch.Execute()
@@ -47,7 +47,7 @@ func (i If) Execute() *RuntimeError {
 	return err
 }
 
-func (v Var) Execute() *RuntimeError {
+func (v *Var) Execute() *RuntimeError {
 	var value interface{}
 	var err *RuntimeError
 	if v.initializer != nil {
@@ -60,14 +60,17 @@ func (v Var) Execute() *RuntimeError {
 	interpreter.environment.define(v.name.Lexeme, value)
 	return nil
 }
-func (w While) Execute() *RuntimeError {
+func (w *While) Execute() *RuntimeError {
 	for {
-		val, _ := w.condition.Eval()
+		val, err := w.condition.Eval()
+		if err != nil {
+			return err
+		}
 		if !isTruthy(val) {
 			break
 		}
 
-		err := w.body.Execute()
+		err = w.body.Execute()
 		if err != nil {
 			if err.Message == "break" {
 				break
@@ -77,7 +80,7 @@ func (w While) Execute() *RuntimeError {
 	}
 	return nil
 }
-func (b Block) Execute() *RuntimeError {
+func (b *Block) Execute() *RuntimeError {
 	return executeBlock(b.statements, NewEnvironmentWithEnclosing(interpreter.environment))
 }
 func executeBlock(statements []Stmt, env *Environment) *RuntimeError {
@@ -98,7 +101,7 @@ func executeBlock(statements []Stmt, env *Environment) *RuntimeError {
 	return nil
 }
 
-func (b Break) Execute() *RuntimeError {
+func (b *Break) Execute() *RuntimeError {
 	return &RuntimeError{
 		Message: "break",
 	}

@@ -17,11 +17,11 @@ func (e *RuntimeError) Error() string {
 	return e.Message
 }
 
-func (l Literal) Eval() (interface{}, *RuntimeError) {
+func (l *Literal) Eval() (interface{}, *RuntimeError) {
 	return l.value, nil
 }
 
-func (l Logical) Eval() (interface{}, *RuntimeError) {
+func (l *Logical) Eval() (interface{}, *RuntimeError) {
 	left, _ := l.left.Eval()
 
 	if l.operator.Type == OR {
@@ -36,11 +36,11 @@ func (l Logical) Eval() (interface{}, *RuntimeError) {
 	return l.right.Eval()
 }
 
-func (g Grouping) Eval() (interface{}, *RuntimeError) {
+func (g *Grouping) Eval() (interface{}, *RuntimeError) {
 	return g.expression.Eval()
 }
 
-func (b Binary) Eval() (interface{}, *RuntimeError) {
+func (b *Binary) Eval() (interface{}, *RuntimeError) {
 	left, err := b.left.Eval()
 	if err != nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (b Binary) Eval() (interface{}, *RuntimeError) {
 	return nil, nil
 }
 
-func (c Call) Eval() (interface{}, *RuntimeError) {
+func (c *Call) Eval() (interface{}, *RuntimeError) {
 	callee, _ := c.callee.Eval()
 
 	var arguments []interface{}
@@ -137,7 +137,7 @@ func (c Call) Eval() (interface{}, *RuntimeError) {
 	}
 	return function.call(arguments), nil
 }
-func (u Unary) Eval() (interface{}, *RuntimeError) {
+func (u *Unary) Eval() (interface{}, *RuntimeError) {
 	right, err := u.right.Eval()
 	if err != nil {
 		return nil, err
@@ -155,36 +155,34 @@ func (u Unary) Eval() (interface{}, *RuntimeError) {
 	return nil, nil
 }
 
-func (v Variable) Eval() (interface{}, *RuntimeError) {
-	// return lookupVariable(v.name, v)
-	return interpreter.environment.get(v.name)
+func (v *Variable) Eval() (interface{}, *RuntimeError) {
+	return lookupVariable(v.name, v)
 }
 
-//	func lookupVariable(name Token, expr Expr) (interface{}, *RuntimeError) {
-//		distance, exists := interpreter.locals[expr]
-//		if exists {
-//			return interpreter.environment.getAt(distance, name.Lexeme)
-//		} else {
-//			return interpreter.globals.get(name)
-//		}
-//	}
-func (a Assign) Eval() (interface{}, *RuntimeError) {
+func lookupVariable(name Token, expr Expr) (interface{}, *RuntimeError) {
+	distance, exists := interpreter.locals[expr]
+	if exists {
+		return interpreter.environment.getAt(distance, name.Lexeme)
+	} else {
+		return interpreter.globals.get(name)
+	}
+}
+func (a *Assign) Eval() (interface{}, *RuntimeError) {
 	value, err := a.value.Eval()
 	if err != nil {
 		return nil, err
 	}
 
-	// distance, exists := interpreter.locals[a]
-	// if exists {
-	// 	interpreter.environment.assignAt(distance, a.name, value)
-	// } else {
-	// interpreter.globals.assign(a.name, value)
-	interpreter.environment.assign(a.name, value)
-	// }
+	distance, exists := interpreter.locals[a]
+	if exists {
+		interpreter.environment.assignAt(distance, a.name, value)
+	} else {
+		interpreter.globals.assign(a.name, value)
+	}
 	return value, nil
 }
 
-func (af AnonFunction) Eval() (interface{}, *RuntimeError) {
+func (af *AnonFunction) Eval() (interface{}, *RuntimeError) {
 	return &LoxFunction{
 		declaration: &Function{
 			name:   nil, // Anonymous functions have no name
@@ -222,5 +220,5 @@ func stringify(value interface{}) string {
 }
 
 func handleRuntimeError(err *RuntimeError) {
-	fmt.Fprintf(os.Stderr, "%s\n[line %d]\n", err.Error(), err.Token.Line)
+	fmt.Fprintf(os.Stderr, "[line %d]{%v} %s\n", err.Token.Line, err.Token.Lexeme, err.Error())
 }

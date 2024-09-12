@@ -2,6 +2,7 @@ package lox
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -65,12 +66,12 @@ func run(scanner *Scanner) error {
 			return err
 		}
 
-		// resolver := NewResolver(interpreter)
-		// resolver.resolveStatements(statements)
+		resolver := NewResolver(interpreter)
+		resolver.resolveStatements(statements)
 
-		// if interpreter.hadError {
-		// 	return errors.New("error during resolution")
-		// }
+		if interpreter.hadError {
+			return errors.New("error during resolution")
+		}
 
 		if statements != nil {
 			interpreter.interpret(statements)

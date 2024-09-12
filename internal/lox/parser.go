@@ -82,7 +82,7 @@ func (p *Parser) statement() Stmt {
 		return p.breakStatement()
 	}
 	if p.match(LEFT_BRACE) {
-		return Block{statements: p.block()}
+		return &Block{statements: p.block()}
 	}
 	return p.expressionStatement()
 }
@@ -116,15 +116,15 @@ func (p *Parser) forStatement() Stmt {
 	body := p.statement()
 
 	if increment != nil {
-		body = Block{[]Stmt{body, Expression{increment}}}
+		body = &Block{[]Stmt{body, &Expression{increment}}}
 	}
 	if condition == nil {
-		condition = Literal{true}
+		condition = &Literal{true}
 	}
-	body = While{condition, body}
+	body = &While{condition, body}
 
 	if initializer != nil {
-		body = Block{[]Stmt{initializer, body}}
+		body = &Block{[]Stmt{initializer, body}}
 	}
 
 	return body
@@ -141,14 +141,14 @@ func (p *Parser) ifStatement() Stmt {
 		elseBranch = p.statement()
 	}
 
-	return If{condition, thenBranch, elseBranch}
+	return &If{condition, thenBranch, elseBranch}
 
 }
 
 func (p *Parser) printStatement() Stmt {
 	value := p.expression()
 	p.consume(SEMICOLON, "Expect ';' after value.")
-	return Print{expression: value}
+	return &Print{expression: value}
 }
 
 func (p *Parser) returnStatement() Stmt {
@@ -158,7 +158,7 @@ func (p *Parser) returnStatement() Stmt {
 		value = p.expression()
 	}
 	p.consume(SEMICOLON, "Expect ';' after return value.")
-	return Return{keyword, value}
+	return &Return{keyword, value}
 }
 
 func (p *Parser) varDeclaration() Stmt {
@@ -169,7 +169,7 @@ func (p *Parser) varDeclaration() Stmt {
 	}
 
 	p.consume(SEMICOLON, "Expect ';' after variable declaration.")
-	return Var{name: name, initializer: initializer}
+	return &Var{name: name, initializer: initializer}
 }
 
 func (p *Parser) whileStatement() Stmt {
@@ -184,7 +184,7 @@ func (p *Parser) whileStatement() Stmt {
 	body := p.statement()
 	p.loopDepth--
 
-	return While{condition, body}
+	return &While{condition, body}
 }
 
 func (p *Parser) breakStatement() Stmt {
@@ -193,13 +193,13 @@ func (p *Parser) breakStatement() Stmt {
 	}
 
 	p.consume(SEMICOLON, "Expect ';' after 'break'.")
-	return Break{}
+	return &Break{}
 }
 
 func (p *Parser) expressionStatement() Stmt {
 	value := p.expression()
 	p.consume(SEMICOLON, "Expect ';' after value.")
-	return Expression{expression: value}
+	return &Expression{expression: value}
 }
 func (p *Parser) function(kind string) Stmt {
 	name := p.consume(IDENTIFIER, fmt.Sprintf("Expect %v name.", kind))
@@ -218,7 +218,7 @@ func (p *Parser) function(kind string) Stmt {
 	p.consume(LEFT_BRACE, fmt.Sprintf("Expect '{' before %v body.", kind))
 	body := p.block()
 
-	return Function{&name, parameters, body}
+	return &Function{&name, parameters, body}
 }
 func (p *Parser) anonFunction() Expr {
 	p.consume(LEFT_PAREN, "Expect '(' before anonymous function parameters.")
@@ -236,7 +236,7 @@ func (p *Parser) anonFunction() Expr {
 	body := p.block()
 
 	// Return the anonymous function as an expression
-	return AnonFunction{params: parameters, body: body}
+	return &AnonFunction{params: parameters, body: body}
 }
 func (p *Parser) block() []Stmt {
 	var statements []Stmt
@@ -256,9 +256,9 @@ func (p *Parser) assignment() Expr {
 		equals := p.previous()
 		value := p.assignment()
 
-		if _, ok := expr.(Variable); ok {
-			name := expr.(Variable).name
-			return Assign{name: name, value: value}
+		if _, ok := expr.(*Variable); ok {
+			name := expr.(*Variable).name
+			return &Assign{name: name, value: value}
 		}
 
 		reportTokenError(equals, "Invalid assignment target.")
@@ -271,7 +271,7 @@ func (p *Parser) or() Expr {
 	for p.match(OR) {
 		operator := p.previous()
 		right := p.and()
-		expr = Logical{expr, operator, right}
+		expr = &Logical{expr, operator, right}
 	}
 	return expr
 }
@@ -281,7 +281,7 @@ func (p *Parser) and() Expr {
 	for p.match(AND) {
 		operator := p.previous()
 		right := p.equality()
-		expr = Logical{expr, operator, right}
+		expr = &Logical{expr, operator, right}
 	}
 	return expr
 }
@@ -291,7 +291,7 @@ func (p *Parser) equality() Expr {
 	for p.match(BANG_EQUAL, EQUAL_EQUAL) {
 		operator := p.previous()
 		right := p.comparison()
-		expr = Binary{expr, operator, right}
+		expr = &Binary{expr, operator, right}
 	}
 
 	return expr
@@ -303,7 +303,7 @@ func (p *Parser) comparison() Expr {
 	for p.match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL) {
 		operator := p.previous()
 		right := p.term()
-		expr = Binary{expr, operator, right}
+		expr = &Binary{expr, operator, right}
 	}
 	return expr
 }
@@ -314,7 +314,7 @@ func (p *Parser) term() Expr {
 	for p.match(MINUS, PLUS) {
 		operator := p.previous()
 		right := p.factor()
-		expr = Binary{expr, operator, right}
+		expr = &Binary{expr, operator, right}
 	}
 
 	return expr
@@ -326,7 +326,7 @@ func (p *Parser) factor() Expr {
 	for p.match(SLASH, STAR) {
 		operator := p.previous()
 		right := p.unary()
-		expr = Binary{expr, operator, right}
+		expr = &Binary{expr, operator, right}
 	}
 
 	return expr
@@ -336,7 +336,7 @@ func (p *Parser) unary() Expr {
 	if p.match(BANG, MINUS) {
 		operator := p.previous()
 		right := p.unary()
-		return Unary{operator, right}
+		return &Unary{operator, right}
 	}
 	return p.call()
 }
@@ -353,7 +353,7 @@ func (p *Parser) finishCall(callee Expr) Expr {
 	}
 	paren := p.consume(RIGHT_PAREN, "Expect ')' after arguments.")
 
-	return Call{callee, paren, arguments}
+	return &Call{callee, paren, arguments}
 }
 func (p *Parser) call() Expr {
 	expr := p.primary()
@@ -370,16 +370,16 @@ func (p *Parser) call() Expr {
 }
 func (p *Parser) primary() Expr {
 	if p.match(FALSE) {
-		return Literal{false}
+		return &Literal{false}
 	}
 	if p.match(TRUE) {
-		return Literal{true}
+		return &Literal{true}
 	}
 	if p.match(NIL) {
-		return Literal{nil}
+		return &Literal{nil}
 	}
 	if p.match(NUMBER, STRING) {
-		return Literal{p.previous().Literal}
+		return &Literal{p.previous().Literal}
 	}
 	if p.match(FUN) {
 		// Directly parse the anonymous function as an expression
@@ -388,10 +388,10 @@ func (p *Parser) primary() Expr {
 	if p.match(LEFT_PAREN) {
 		expr := p.expression()
 		p.consume(RIGHT_PAREN, "Expect ')' after expression.")
-		return Grouping{expr}
+		return &Grouping{expr}
 	}
 	if p.match(IDENTIFIER) {
-		return Variable{p.previous()}
+		return &Variable{p.previous()}
 	}
 
 	// on a token that can't start an expression
