@@ -51,6 +51,21 @@ func (s *Set) Eval() (interface{}, *RuntimeError) {
 	object.(*LoxInstance).set(s.name, value)
 	return value, nil
 }
+func (s *Super) Eval() (interface{}, *RuntimeError) {
+	distance := interpreter.locals[s]
+	sc, _ := interpreter.environment.getAt(distance, "super")
+	superclass := sc.(*LoxClass)
+
+	obj, _ := interpreter.environment.getAt(distance-1, "this")
+	object := obj.(*LoxInstance)
+
+	method := superclass.findMethod(s.method.Lexeme)
+
+	if method == nil {
+		return nil, &RuntimeError{s.method, fmt.Sprintf("Undefined property '%s'.", s.method.Lexeme)}
+	}
+	return method.bind(object), nil
+}
 func (t *This) Eval() (interface{}, *RuntimeError) {
 	return lookupVariable(t.keyword, t)
 }

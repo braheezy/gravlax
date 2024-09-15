@@ -13,7 +13,8 @@ type ClassType int
 
 const (
 	NoClass ClassType = iota
-	InClass
+	RegularClass
+	SubClass
 )
 
 type LoopType int
@@ -52,13 +53,27 @@ func (b *Block) Resolve(r *Resolver) {
 }
 func (c *Class) Resolve(r *Resolver) {
 	enclosingClass := r.currentClass
-	r.currentClass = InClass
+	r.currentClass = RegularClass
 	defer func() {
 		r.currentClass = enclosingClass
 	}()
 
 	r.declare(c.name)
 	r.define(c.name)
+
+	if c.superclass != nil {
+		if c.name.Lexeme == c.superclass.name.Lexeme {
+			loxError(c.superclass.name, "A class can't inherit from itself.")
+		} else {
+			r.currentClass = SubClass
+			c.superclass.Resolve(r)
+		}
+	}
+
+	if c.superclass != nil {
+		r.beginScope()
+		peek(r.scopes)["super"] = true
+	}
 
 	r.beginScope()
 	peek(r.scopes)["this"] = true
@@ -72,6 +87,10 @@ func (c *Class) Resolve(r *Resolver) {
 	}
 
 	r.endScope()
+
+	if c.superclass != nil {
+		r.endScope()
+	}
 }
 func (e *Expression) Resolve(r *Resolver) {
 	e.expression.(Resolvable).Resolve(r)
@@ -122,6 +141,14 @@ func (l *Logical) Resolve(r *Resolver) {
 func (s *Set) Resolve(r *Resolver) {
 	s.value.(Resolvable).Resolve(r)
 	s.object.(Resolvable).Resolve(r)
+}
+func (s *Super) Resolve(r *Resolver) {
+	if r.currentClass == NoClass {
+		loxError(s.keyword, "Can't use 'super' outside of a class.")
+	} else if r.currentClass != SubClass {
+		loxError(s.keyword, "Can't use 'super' in a class with no superclass!")
+	}
+	r.resolveLocal(s, s.keyword)
 }
 func (t *This) Resolve(r *Resolver) {
 	if r.currentClass == NoClass {

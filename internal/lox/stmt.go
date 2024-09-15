@@ -10,6 +10,7 @@ type Block struct {
 
 type Class struct {
   name Token
+  superclass *Variable
   methods []*Function
 }
 

@@ -25,6 +25,7 @@ func main() {
 		"Literal  : value interface{}",
 		"Logical  : left Expr, operator Token, right Expr",
 		"Set      : object Expr, name Token, value Expr",
+		"Super    : keyword Token, method Token",
 		"This     : keyword Token",
 		"Unary    : operator Token, right Expr",
 		"Variable : name Token",
@@ -34,7 +35,7 @@ func main() {
 	}
 	err = defineAst(outputDir, "Stmt", []string{
 		"Block        : statements []Stmt",
-		"Class        : name Token, methods []*Function",
+		"Class        : name Token, superclass *Variable, methods []*Function",
 		"Expression   : expression Expr",
 		"Function     : name *Token, params []Token, body []Stmt",
 		"AnonFunction : params []Token, body []Stmt",

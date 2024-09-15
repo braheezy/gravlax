@@ -102,7 +102,25 @@ func executeBlock(statements []Stmt, env *Environment) *RuntimeError {
 }
 
 func (c *Class) Execute() *RuntimeError {
+	var sc interface{}
+	var superclass *LoxClass
+	var err *RuntimeError
+	var ok bool
+	if c.superclass != nil {
+		sc, err = c.superclass.Eval()
+		if err != nil {
+			return err
+		}
+		if superclass, ok = sc.(*LoxClass); !ok {
+			return &RuntimeError{c.superclass.name, "Superclass must be a class."}
+		}
+	}
 	interpreter.environment.define(c.name.Lexeme, nil)
+
+	if c.superclass != nil {
+		interpreter.environment = NewEnvironmentWithEnclosing(interpreter.environment)
+		interpreter.environment.define("super", superclass)
+	}
 
 	methods := make(map[string]*LoxFunction)
 	for _, method := range c.methods {
@@ -113,7 +131,12 @@ func (c *Class) Execute() *RuntimeError {
 		}
 		methods[method.name.Lexeme] = function
 	}
-	class := &LoxClass{name: c.name.Lexeme, methods: methods}
+	class := &LoxClass{name: c.name.Lexeme, methods: methods, superclass: superclass}
+
+	if c.superclass != nil {
+		interpreter.environment = interpreter.environment.enclosing
+	}
+
 	interpreter.environment.assign(c.name, class)
 	return nil
 }

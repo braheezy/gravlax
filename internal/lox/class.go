@@ -1,8 +1,9 @@
 package lox
 
 type LoxClass struct {
-	name    string
-	methods map[string]*LoxFunction
+	name       string
+	methods    map[string]*LoxFunction
+	superclass *LoxClass
 }
 
 func (lc LoxClass) toString() string {
@@ -30,6 +31,9 @@ func (lc LoxClass) arity() int {
 func (lc *LoxClass) findMethod(name string) *LoxFunction {
 	if f, exists := lc.methods[name]; exists {
 		return f
+	}
+	if lc.superclass != nil {
+		return lc.superclass.findMethod(name)
 	}
 	return nil
 }
