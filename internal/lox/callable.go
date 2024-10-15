@@ -14,12 +14,12 @@ type LoxFunction struct {
 	isInitializer bool
 }
 
-func (lf LoxFunction) bind(instance *LoxInstance) *LoxFunction {
+func (lf *LoxFunction) bind(instance *LoxInstance) *LoxFunction {
 	env := NewEnvironmentWithEnclosing(lf.closure)
 	env.define("this", instance)
 	return &LoxFunction{declaration: lf.declaration, closure: env, isInitializer: lf.isInitializer}
 }
-func (lf LoxFunction) call(arguments []interface{}) (out interface{}) {
+func (lf *LoxFunction) call(arguments []interface{}) (out interface{}) {
 	environment := NewEnvironmentWithEnclosing(lf.closure)
 
 	for i := 0; i < len(lf.declaration.params); i++ {
@@ -49,11 +49,11 @@ func (lf LoxFunction) call(arguments []interface{}) (out interface{}) {
 	return nil
 }
 
-func (lf LoxFunction) arity() int {
+func (lf *LoxFunction) arity() int {
 	return len(lf.declaration.params)
 }
 
-func (lf LoxFunction) toString() string {
+func (lf *LoxFunction) toString() string {
 	return fmt.Sprintf("<fn %v>", lf.declaration.name.Lexeme)
 }
 

@@ -17,6 +17,6 @@ func (c ClockFunction) arity() int {
 }
 
 // String method provides a string representation of the function.
-func (c ClockFunction) String() string {
+func (c ClockFunction) toString() string {
 	return "<native fn>"
 }
