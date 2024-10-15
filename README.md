@@ -9,23 +9,27 @@ You need Go 1.21.9+.
 
 Clone the code and get inside the directory:
 
-    git clone https://github.com/braheezy/gravlax
-    cd gravlax
+```bash
+git clone https://github.com/braheezy/gravlax
+cd gravlax
+```
 
 Run the REPL (Ctrl+D to exit):
 
-    $ go run main.go
-    > print("hey there");
-    hey there
-    > (ctrl+d)
-    bye!
-
+```bash
+$ go run main.go
+> print("hey there");
+hey there
+> (ctrl+d)
+bye!
+```
 Or run a file:
 
-    $ echo 'print("hey there");' > hello.lox
-    $ go run main.go hello.lox
-    hey there
-
+```bash
+$ echo 'print("hey there");' > hello.lox
+$ go run main.go hello.lox
+hey there
+```
 ## Notes
 The tutorial book covers `jlox`, a Java implementation using a tree-walk interpreter approach to executing Lox programs. `gravlax` is the same thing, but in Go.
 
